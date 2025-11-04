@@ -1,0 +1,7 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: opensips-cfg-configmap
+  namespace: {{.Values.namespace}}
+data:
+  opensips.cfg.template: {{ required "A valid .Values.configMaps.opensips_cfg_template entry is required!" (toYaml .Values.configMaps.opensips_cfg_template | indent 2) }}

@@ -1,0 +1,7 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: opensips-mrcp-configmap
+  namespace: {{.Values.namespace}}
+data:
+  load_balancer: {{ required "A valid .Values.configMaps.load_balancer entry is required!" (toYaml .Values.configMaps.load_balancer | indent 2) }}
