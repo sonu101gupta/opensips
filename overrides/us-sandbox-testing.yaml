@@ -1,40 +1,41 @@
 replicas: 1
 app: opensips-mrcp
+namespace: opensips-testing
 
 image:
-  repository: docker-registry:3000/opensips-mrcp
-  tag: 3.6.2-icici-lb
+  repository: 536612919621.dkr.ecr.ap-south-1.amazonaws.com/testing/sonu
+  tag: 3.6.2
   pullPolicy: Always
     
 resources: 
   limits:
-    cpu: 2500m
-    memory: 1500Mi
+    cpu: 1000m
+    memory: 1000Mi
   requests:
-    cpu: 500m
-    memory: 500Mi
+    cpu: 250m
+    memory: 250Mi
 
 env:
-  CLIENT: icici
-  LOG_LEVEL: -1
-  DEBUG_MODE: "no"
-  NUM_CHILDREN: "8"
+  CLIENT: sandbox
+  LOG_LEVEL: 3
+  DEBUG_MODE: "yes"
+  NUM_CHILDREN: "4"
   DIALOG_TIMEOUT: "1800"
 
-enableReadinessProbe: false
-readinessProbeInitialDelay: 10
-readinessProbeInterval: 5
-readinessProbeTimeout: 3
+enableReadinessProbe: true
+readinessProbeInitialDelay: 15
+readinessProbeInterval: 10
+readinessProbeTimeout: 5
 
-enableLivenessProbe: false
-livenessProbeInitialDelay: 20
+enableLivenessProbe: true
+livenessProbeInitialDelay: 30
 livenessProbeInterval: 30
-livenessProbeTimeout: 1
+livenessProbeTimeout: 3
 
-nodeSelector:
-  runVoiceGatewayLB: "true"
+nodeSelector: {}
 tolerations: []
 affinity: {}
+
 volumeMounts:
  - name: opensips-mrcp-configmap
    mountPath: /usr/src/opensips-3.6.2/scripts/dbtext/opensips/load_balancer
@@ -46,8 +47,7 @@ volumeMounts:
 configMaps:
   load_balancer: |-
     id(int,auto) group_id(int) dst_uri(string) resources(string) probe_mode(int) attrs(string,null) description(string,null)
-    1:1:sip\:10.78.31.157\:9060:pstn=10000:2::
-    2:1:sip\:0.0.0.0\:9060:pstn=10000:2::
+    1:1:sip\:0.0.0.0\:9060:pstn=10000:2::
    
   opensips_cfg_template: |-
     ####### Global Parameters #########
@@ -67,15 +67,14 @@ configMaps:
     debug_mode=${DEBUG_MODE}
     auto_aliases=no
 
-    listen=udp:${INTERNAL_IP}:9060
-    #listen=udp:0.0.0.0:9060
-    listen=tcp:${INTERNAL_IP}:9060
-    #listen=tcp:0.0.0.0:9060
-    # Note: In OpenSIPS 3.6, use listen= not socket=
+    # UDP and TCP transports are built into core in 3.6  
+    # Use socket= as listen= is deprecated in 3.6
+    socket=udp:0.0.0.0:9060
+    socket=tcp:0.0.0.0:9060
 
-    tcp_max_connections = 4096
-    udp_workers = 16
-    tcp_workers = 16
+    tcp_max_connections = 2048
+    udp_workers = 8
+    tcp_workers = 8
 
     ####### Modules Section ########
     
@@ -127,7 +126,6 @@ configMaps:
 
     loadmodule "dispatcher.so"
     modparam("dispatcher", "db_url", "text:///usr/src/opensips-3.6.2/scripts/dbtext/opensips")
-    #modparam("dispatcher", "db_url", "text:///usr/src/opensips-3.2.6/dbtext")
 
     #### ACCounting module
     loadmodule "acc.so"
@@ -152,8 +150,6 @@ configMaps:
     modparam("load_balancer", "probing_interval", 10)
 
     #### transport protocols
-    loadmodule "proto_udp.so"
-    loadmodule "proto_tcp.so"
     loadmodule "rtpengine.so"
 
     #### USeR LOCation module
@@ -182,10 +178,7 @@ configMaps:
     route{
             setuser("");
             if ($rm=="OPTIONS") {
-                append_branch("sip:10.78.31.157:9060", "1");
-                serialize_branches(1);
-                next_branches();
-                t_relay();
+                sl_send_reply(200,"OK");
                 exit;
             }
 
@@ -193,6 +186,7 @@ configMaps:
                     sl_send_reply(483,"Too Many Hops");
                     exit;
             }
+
             if (has_totag()) {
             # handle hop-by-hop ACK (no routing required)
             if ( $rm=="ACK" && t_check_trans() ) {
@@ -310,3 +304,4 @@ configMaps:
                 acc_log_request("200 Dialog Timeout");
             }
         }
+
