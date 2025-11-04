@@ -37,7 +37,7 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/bin/bash", "-c"]
         args:
-          - "envsubst '$NUM_CHILDREN,$LOG_LEVEL,$DEBUG_MODE,$INTERNAL_IP,$DIALOG_TIMEOUT' < /usr/src/opensips-3.6.2/configs/opensips.cfg.template > /usr/src/opensips-3.6.2/configs/opensips.cfg && ./opensips -F -f configs/opensips.cfg -m 512 -M 64"
+          - "envsubst '$LOG_LEVEL,$DEBUG_MODE,$INTERNAL_IP,$DIALOG_TIMEOUT' < /usr/src/opensips-3.6.2/configs/opensips.cfg.template > /usr/src/opensips-3.6.2/configs/opensips.cfg && ./opensips -F -f configs/opensips.cfg -m 512 -M 64"
         # command: ["/bin/bash","-c"]
         # args: [ "sleep 1000000;"]
         resources:
